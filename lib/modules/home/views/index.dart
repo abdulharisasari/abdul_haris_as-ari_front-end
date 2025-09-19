@@ -30,7 +30,6 @@ class _HomePageState extends State<HomePage> {
   void initState() {
     super.initState();
     _getProduct();
-    _allProducts = products;
   }
 
   Future<void> _getProduct() async{
@@ -40,6 +39,7 @@ class _HomePageState extends State<HomePage> {
       if (productController.isNotEmpty) {
         setState(() {
           products = productController;
+          _allProducts = products;
         });
       }else{
         setState(() {
@@ -96,10 +96,16 @@ class _HomePageState extends State<HomePage> {
                                 isSearching = false;
                                 products = _allProducts;
                               } else {
-                                products = _allProducts.where((p) => (p.name ?? "").toLowerCase().contains(value.toLowerCase())).toList();
+                                isSearching = true;
+                                products = _allProducts
+                                    .where((p) => (p.name ?? "")
+                                    .toLowerCase()
+                                    .contains(value.toLowerCase()))
+                                    .toList();
                               }
                             });
-                          },
+                          }
+
                         ),
                       )
                     : Center(child: Text('List Stok Barang', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w500, color: Color(fgPrimaryColor)))),

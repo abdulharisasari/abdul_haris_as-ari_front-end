@@ -21,7 +21,6 @@ class ProductModel {
     stok: json['stok'] != null ? int.tryParse(json['stok'].toString()) : null,
     categoryName: json['kelompok_barang'],
     price: json['harga'] != null ? (num.tryParse(json['harga'].toString())?.toInt() ?? 0) : 0,
-
     categoryListModel: json['kategori'] != null ? CategoryModel.fromJson(json['kategori']) : null,
   );
 }
