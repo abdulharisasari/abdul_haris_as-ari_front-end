@@ -13,7 +13,7 @@ class ProductRepository {
   Future<List<ProductModel>> getProducts() async {
     try {
       final response = await apiProvider.dio.get("/barang");
-
+      print("Dio error response: ${response.toString()}"); 
       if (response.statusCode == 200) {
         final List data = response.data['data'];
         return ProductModel.fromList(data);
@@ -68,7 +68,7 @@ class ProductRepository {
       "/barang/$id",
       data: data,
     );
-    if (response.statusCode == 200 && response.statusCode ==201) {
+    if (response.statusCode == 200 || response.statusCode ==201) {
       if (response.data != null && response.data['data'] != null) {
         return ProductModel.fromJson(response.data['data']);
       } else {

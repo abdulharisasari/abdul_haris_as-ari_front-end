@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:productfeflutter/routes/app_routes.dart';
 
@@ -61,7 +60,6 @@ class FormController extends GetxController {
     Get.snackbar("Sukses", "Produk berhasil diubah!");
   } catch (e) {
     Get.snackbar("Error", e.toString());
-    debugPrint("$e");
   } finally {
     isLoading.value = false;
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:productfeflutter/core/themes.dart';
 
+import '../../../core/utils.dart';
 import '../../../data/models/category_model.dart';
 import '../../../data/models/product_model.dart';
 import '../../../data/repository/repository.dart';
@@ -26,25 +27,39 @@ class _FormProductPageState extends State<FormProductPage> {
   final FocusNode _stockFN = FocusNode();
   final FocusNode _priceFN = FocusNode();
   final FormController controller = Get.find();
+  final product = Get.arguments as ProductModel?;
 
   bool _isLoading = false, isLoadingCategory = false;
 
   List<CategoryModel> categoryList = [];
   CategoryModel? selectedCategory;
   ProductModel? productModel;
-  final product = Get.arguments as ProductModel?;
 
-
-
+  int? _rawPrice;
   @override
   void initState() {
     _init();
     _fetchCategories();
+    _priceTC.addListener(() {
+      final digits = _priceTC.text.replaceAll(RegExp(r'[^0-9]'), '');
+      if (digits.isEmpty) {
+        _rawPrice = null;
+        return;
+      }
+
+      _rawPrice = int.parse(digits);
+
+      final newText = Utils.formatCurrency(_rawPrice!);
+      _priceTC.value = TextEditingValue(
+        text: newText,
+        selection: TextSelection.collapsed(offset: newText.length),
+      );
+    });
+
     super.initState();
   }
 
   void _init() {
-
     setState(() {
       productModel = product;
       _nameTC.text = "${product?.name ?? ''}";
@@ -61,7 +76,6 @@ class _FormProductPageState extends State<FormProductPage> {
       setState(() {
         categoryList = data;
 
-        // Jika sedang edit, otomatis pilih category dari productModel
         if (productModel != null && productModel!.categoryId != null) {
           selectedCategory = categoryList.firstWhere(
             (c) => c.id == productModel!.categoryId,
@@ -86,26 +100,24 @@ class _FormProductPageState extends State<FormProductPage> {
     setState(() {
       _isLoading = true;
     });
-    print("sssssssssssssssssssssssssssss");
     try {
-     final product = ProductModel(
-          name: _nameTC.text,
-          categoryId: int.tryParse(_categoryIdTC.text),
-          categoryName: _categoryIdTC.text,
-          stok: int.tryParse(_stockTC.text),
-          price: int.tryParse(_priceTC.text),
-        );
-        await controller.createProduct(product);
+      final product = ProductModel(
+        name: _nameTC.text,
+        categoryId: int.tryParse(_categoryIdTC.text),
+        categoryName: _categoryIdTC.text,
+        stok: int.tryParse(_stockTC.text),
+        price: _rawPrice
+      );
+      print("saveL: ${product.price}");
+      await controller.createProduct(product);
     } catch (e) {
-      debugPrint("catch _saveProduct: $e");
+      print("catch _saveProduct: $e");
     } finally {
       setState(() {
         _isLoading = false;
       });
     }
   }
-
-  
 
   @override
   void dispose() {
@@ -122,43 +134,49 @@ class _FormProductPageState extends State<FormProductPage> {
     super.dispose();
   }
 
+    
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Tambah Barang')),
-      body: Expanded(
-        child: Container(
-          padding: EdgeInsets.all(16.0),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              children: [
-                SingleChildScrollView(
-                  controller: ScrollController(),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      _buildTextField(label: "Nama Barang", type: TextInputType.text, controller: _nameTC, focusNode: _nameFN),
-                      _buildTextField(label: "Kategori Barang", type: TextInputType.text, controller: _categoryIdTC, focusNode: _catagoryFN, read: true),
-                      _buildCategoryDropdown(categories: categoryList, selectedCategory: selectedCategory),
-                      _buildTextField(label: "Stok", type: TextInputType.number, controller: _stockTC, focusNode: _stockFN),
-                      _buildTextField(label: "Harga", type: TextInputType.number, controller: _priceTC, focusNode: _priceFN),
-                    ],
-                  ),
+      appBar: AppBar(
+      title: Text(productModel?.id != null ? 'Edit Barang' : 'Tambah Barang')),
+      body: Column(
+        children: [
+          Expanded(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.all(16.0),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildTextField(label: "Nama Barang",type: TextInputType.text,controller: _nameTC,focusNode: _nameFN),
+                    SizedBox(height: 10),
+                    _buildTextField(label: "Kategori Barang",type: TextInputType.text,controller: _categoryIdTC,focusNode: _catagoryFN,read: true),
+                    SizedBox(height: 10),
+                    _buildCategoryDropdown(categories: categoryList, selectedCategory: selectedCategory),
+                    SizedBox(height: 10),
+                    _buildTextField(label: "Stok",type: TextInputType.number,controller: _stockTC,focusNode: _stockFN),
+                    SizedBox(height: 10),
+                    _buildTextField(label: "Harga",type: TextInputType.number,controller: _priceTC,focusNode: _priceFN),
+                    SizedBox(height: 80), 
+                  ],
                 ),
-                Spacer(),
-               if(product?.id !=null) _buildButtonEdit(),
-               if(product?.id == null) _buildButtonAdd()
-              ],
+              ),
             ),
           ),
-        ),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: product?.id != null ? _buildButtonEdit() : _buildButtonAdd(),
+          ),
+        ],
       ),
     );
   }
 
+
   Widget _buildCategoryDropdown({required List<CategoryModel> categories, required CategoryModel? selectedCategory}) {
-    if (categories.isEmpty) {
+    if (isLoadingCategory) {
       return const CircularProgressIndicator();
     }
 
@@ -175,7 +193,7 @@ class _FormProductPageState extends State<FormProductPage> {
         ),
         SizedBox(height: 5),
         Container(
-          height: 50,
+          alignment: Alignment.center,
           child: DropdownButtonFormField<CategoryModel>(
             value: selectedCategory,
             items: categories.map((c) {
@@ -192,7 +210,7 @@ class _FormProductPageState extends State<FormProductPage> {
               });
             },
             isDense: true,
-            decoration: const InputDecoration(hintText: "Masukan Kelompok Barang", border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 16)),
+            decoration: InputDecoration(hintText: "Masukan Kelompok Barang", border: OutlineInputBorder(), contentPadding: EdgeInsets.symmetric(horizontal: 16)),
             validator: (val) => val == null ? "Kategori wajib dipilih" : null,
           ),
         ),
@@ -277,11 +295,11 @@ class _FormProductPageState extends State<FormProductPage> {
       width: double.infinity,
       height: 44,
       child: ElevatedButton(
-        onPressed:() async {
-                if (_formKey.currentState!.validate()) {
-                   _saveProduct();
-                }
-              },
+        onPressed: () async {
+          if (_formKey.currentState!.validate()) {
+            _saveProduct();
+          }
+        },
         style: ElevatedButton.styleFrom(
           backgroundColor: _isLoading ? Color(bgSecondaryColor) : Color(primaryColor),
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20.0)),
@@ -307,12 +325,7 @@ class _FormProductPageState extends State<FormProductPage> {
             ? null
             : () async {
                 if (_formKey.currentState!.validate()) {
-                    final productEdit = EditProductRequest(
-                    name: _nameTC.text,
-                    categoryId: int.tryParse(_categoryIdTC.text)!,
-                    price: int.tryParse(_priceTC.text)!,
-                    stok: int.tryParse(_stockTC.text)!
-                  );
+                  final productEdit = EditProductRequest(name: _nameTC.text, categoryId: int.tryParse(_categoryIdTC.text)!, price: _rawPrice!, stok: int.tryParse(_stockTC.text)!);
                   await controller.editProduct(productEdit, productModel!.id!);
                 }
               },
